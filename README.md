@@ -1,6 +1,4 @@
-Voici le README corrigé et propre à copier-coller :
 
----
 
 ```markdown
 # HAPI FHIR Observabilite — Projet DevOps ENSIAS 2026
