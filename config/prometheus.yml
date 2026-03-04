@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s      # Prometheus collecte les métriques toutes les 15 secondes
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'hapi-fhir'
+    metrics_path: '/actuator/prometheus'   # L'endpoint qu'on vient d'activer
+    static_configs:
+      - targets: ['hapi-fhir-jpaserver-start:8080']  # Nom du conteneur + port interne
+        labels:
+          app: 'hapi-fhir'

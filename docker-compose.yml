@@ -3,21 +3,31 @@ services:
     build: .
     container_name: hapi-fhir-jpaserver-start
     restart: on-failure
+    networks:
+      - monitoring
     environment:
       SPRING_DATASOURCE_URL: "jdbc:postgresql://hapi-fhir-postgres:5432/hapi"
       SPRING_DATASOURCE_USERNAME: "admin"
       SPRING_DATASOURCE_PASSWORD: "admin"
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: "org.postgresql.Driver"
       SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgresDialect
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,prometheus,metrics"
+      MANAGEMENT_ENDPOINT_PROMETHEUS_ENABLED: "true"
+      MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED: "true"
     ports:
-      - "8080:8080"
+      - "9090:8080"
     depends_on:
       hapi-fhir-postgres:
         condition: service_healthy
+    labels:
+      - "logging=promtail"
+
   hapi-fhir-postgres:
     image: postgres:16-alpine
     container_name: hapi-fhir-postgres
     restart: always
+    networks:
+      - monitoring
     environment:
       POSTGRES_DB: "hapi"
       POSTGRES_USER: "admin"
@@ -30,6 +40,76 @@ services:
       retries: 5
     volumes:
       - hapi-fhir-postgres:/var/lib/postgresql/data
+    labels:
+      - "logging=promtail"
+
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: loki
+    user: "0"
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./config/loki-config.yml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: promtail
+    restart: unless-stopped
+    networks:
+      - monitoring
+    volumes:
+      - ./config/promtail-config.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: grafana
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+    depends_on:
+      - loki
+
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    container_name: prometheus
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "9091:9090"    # On utilise 9091 car ton HAPI FHIR occupe déjà le 9090
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=7d'    # Garde 7 jours de données
+    depends_on:
+      - hapi-fhir-jpaserver-start
 
 volumes:
   hapi-fhir-postgres:
+  loki-data:
+  grafana-data:
+  prometheus-data:
+
+networks:
+  monitoring:
+    driver: bridge
