@@ -14,8 +14,18 @@ services:
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,prometheus,metrics"
       MANAGEMENT_ENDPOINT_PROMETHEUS_ENABLED: "true"
       MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED: "true"
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "1.0"
+      SPRING_APPLICATION_NAME: "hapi-fhir"
+      JAVA_TOOL_OPTIONS: "-javaagent:/agents/opentelemetry-javaagent.jar"
+      OTEL_SERVICE_NAME: "hapi-fhir"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://tempo:4318"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+      OTEL_METRICS_EXPORTER: "none"
+      OTEL_LOGS_EXPORTER: "none"
     ports:
       - "9090:8080"
+    volumes:
+      - ./agents:/agents
     depends_on:
       hapi-fhir-postgres:
         condition: service_healthy
@@ -103,12 +113,28 @@ services:
       - '--storage.tsdb.retention.time=7d'    # Garde 7 jours de données
     depends_on:
       - hapi-fhir-jpaserver-start
+  
+  tempo:
+    image: grafana/tempo:2.3.0
+    container_name: tempo
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "3200:3200"    # Interface Tempo
+      - "4317:4317"    # OTLP gRPC (reçoit les traces)
+      - "4318:4318"    # OTLP HTTP
+    volumes:
+      - ./config/tempo-config.yml:/etc/tempo.yml
+      - tempo-data:/tmp/tempo
+    command: -config.file=/etc/tempo.yml
 
 volumes:
   hapi-fhir-postgres:
   loki-data:
   grafana-data:
   prometheus-data:
+  tempo-data:
 
 networks:
   monitoring:
