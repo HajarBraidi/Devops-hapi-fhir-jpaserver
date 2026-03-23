@@ -1,0 +1,424 @@
+{
+  "summary": {
+    "0": {
+      "avg_mttd": 275.0,
+      "avg_mttr": 440.0,
+      "detect_rate": 33.3,
+      "detected": 2,
+      "total": 6,
+      "raw": {
+        "mttd": [
+          300,
+          250
+        ],
+        "mttr": [
+          480,
+          400
+        ],
+        "detected": 2,
+        "total": 6
+      }
+    },
+    "1": {
+      "avg_mttd": 56.2,
+      "avg_mttr": 127.5,
+      "detect_rate": 66.7,
+      "detected": 4,
+      "total": 6,
+      "raw": {
+        "mttd": [
+          45,
+          90,
+          30,
+          60
+        ],
+        "mttr": [
+          120,
+          180,
+          60,
+          150
+        ],
+        "detected": 4,
+        "total": 6
+      }
+    },
+    "2": {
+      "avg_mttd": 20.5,
+      "avg_mttr": 73.3,
+      "detect_rate": 100.0,
+      "detected": 6,
+      "total": 6,
+      "raw": {
+        "mttd": [
+          15,
+          20,
+          25,
+          10,
+          18,
+          35
+        ],
+        "mttr": [
+          60,
+          75,
+          90,
+          45,
+          70,
+          100
+        ],
+        "detected": 6,
+        "total": 6
+      }
+    },
+    "3": {
+      "avg_mttd": 9.5,
+      "avg_mttr": 38.3,
+      "detect_rate": 100.0,
+      "detected": 6,
+      "total": 6,
+      "raw": {
+        "mttd": [
+          8,
+          12,
+          10,
+          5,
+          7,
+          15
+        ],
+        "mttr": [
+          35,
+          45,
+          40,
+          25,
+          30,
+          55
+        ],
+        "detected": 6,
+        "total": 6
+      }
+    }
+  },
+  "raw_rows": [
+    {
+      "Niveau": "0",
+      "Incident": "1",
+      "Description": "DB Down",
+      "Detected": true,
+      "MTTD_sec": 300,
+      "MTTR_sec": 480
+    },
+    {
+      "Niveau": "0",
+      "Incident": "2",
+      "Description": "CPU Overload",
+      "Detected": false,
+      "MTTD_sec": null,
+      "MTTR_sec": null
+    },
+    {
+      "Niveau": "0",
+      "Incident": "3",
+      "Description": "Memory Limit",
+      "Detected": false,
+      "MTTD_sec": null,
+      "MTTR_sec": null
+    },
+    {
+      "Niveau": "0",
+      "Incident": "4",
+      "Description": "Erreurs 500",
+      "Detected": false,
+      "MTTD_sec": null,
+      "MTTR_sec": null
+    },
+    {
+      "Niveau": "0",
+      "Incident": "5",
+      "Description": "Latence",
+      "Detected": true,
+      "MTTD_sec": 250,
+      "MTTR_sec": 400
+    },
+    {
+      "Niveau": "0",
+      "Incident": "6",
+      "Description": "Disque Plein",
+      "Detected": false,
+      "MTTD_sec": null,
+      "MTTR_sec": null
+    },
+    {
+      "Niveau": "1",
+      "Incident": "1",
+      "Description": "DB Down",
+      "Detected": true,
+      "MTTD_sec": 45,
+      "MTTR_sec": 120
+    },
+    {
+      "Niveau": "1",
+      "Incident": "2",
+      "Description": "CPU Overload",
+      "Detected": true,
+      "MTTD_sec": 90,
+      "MTTR_sec": 180
+    },
+    {
+      "Niveau": "1",
+      "Incident": "3",
+      "Description": "Memory Limit",
+      "Detected": false,
+      "MTTD_sec": null,
+      "MTTR_sec": null
+    },
+    {
+      "Niveau": "1",
+      "Incident": "4",
+      "Description": "Erreurs 500",
+      "Detected": true,
+      "MTTD_sec": 30,
+      "MTTR_sec": 60
+    },
+    {
+      "Niveau": "1",
+      "Incident": "5",
+      "Description": "Latence",
+      "Detected": true,
+      "MTTD_sec": 60,
+      "MTTR_sec": 150
+    },
+    {
+      "Niveau": "1",
+      "Incident": "6",
+      "Description": "Disque Plein",
+      "Detected": false,
+      "MTTD_sec": null,
+      "MTTR_sec": null
+    },
+    {
+      "Niveau": "2",
+      "Incident": "1",
+      "Description": "DB Down",
+      "Detected": true,
+      "MTTD_sec": 15,
+      "MTTR_sec": 60
+    },
+    {
+      "Niveau": "2",
+      "Incident": "2",
+      "Description": "CPU Overload",
+      "Detected": true,
+      "MTTD_sec": 20,
+      "MTTR_sec": 75
+    },
+    {
+      "Niveau": "2",
+      "Incident": "3",
+      "Description": "Memory Limit",
+      "Detected": true,
+      "MTTD_sec": 25,
+      "MTTR_sec": 90
+    },
+    {
+      "Niveau": "2",
+      "Incident": "4",
+      "Description": "Erreurs 500",
+      "Detected": true,
+      "MTTD_sec": 10,
+      "MTTR_sec": 45
+    },
+    {
+      "Niveau": "2",
+      "Incident": "5",
+      "Description": "Latence",
+      "Detected": true,
+      "MTTD_sec": 18,
+      "MTTR_sec": 70
+    },
+    {
+      "Niveau": "2",
+      "Incident": "6",
+      "Description": "Disque Plein",
+      "Detected": true,
+      "MTTD_sec": 35,
+      "MTTR_sec": 100
+    },
+    {
+      "Niveau": "3",
+      "Incident": "1",
+      "Description": "DB Down",
+      "Detected": true,
+      "MTTD_sec": 8,
+      "MTTR_sec": 35
+    },
+    {
+      "Niveau": "3",
+      "Incident": "2",
+      "Description": "CPU Overload",
+      "Detected": true,
+      "MTTD_sec": 12,
+      "MTTR_sec": 45
+    },
+    {
+      "Niveau": "3",
+      "Incident": "3",
+      "Description": "Memory Limit",
+      "Detected": true,
+      "MTTD_sec": 10,
+      "MTTR_sec": 40
+    },
+    {
+      "Niveau": "3",
+      "Incident": "4",
+      "Description": "Erreurs 500",
+      "Detected": true,
+      "MTTD_sec": 5,
+      "MTTR_sec": 25
+    },
+    {
+      "Niveau": "3",
+      "Incident": "5",
+      "Description": "Latence",
+      "Detected": true,
+      "MTTD_sec": 7,
+      "MTTR_sec": 30
+    },
+    {
+      "Niveau": "3",
+      "Incident": "6",
+      "Description": "Disque Plein",
+      "Detected": true,
+      "MTTD_sec": 15,
+      "MTTR_sec": 55
+    }
+  ],
+  "by_incident": {
+    "0": {
+      "1": {
+        "mttd": 300,
+        "mttr": 480,
+        "detected": true
+      },
+      "2": {
+        "mttd": null,
+        "mttr": null,
+        "detected": false
+      },
+      "3": {
+        "mttd": null,
+        "mttr": null,
+        "detected": false
+      },
+      "4": {
+        "mttd": null,
+        "mttr": null,
+        "detected": false
+      },
+      "5": {
+        "mttd": 250,
+        "mttr": 400,
+        "detected": true
+      },
+      "6": {
+        "mttd": null,
+        "mttr": null,
+        "detected": false
+      }
+    },
+    "1": {
+      "1": {
+        "mttd": 45,
+        "mttr": 120,
+        "detected": true
+      },
+      "2": {
+        "mttd": 90,
+        "mttr": 180,
+        "detected": true
+      },
+      "3": {
+        "mttd": null,
+        "mttr": null,
+        "detected": false
+      },
+      "4": {
+        "mttd": 30,
+        "mttr": 60,
+        "detected": true
+      },
+      "5": {
+        "mttd": 60,
+        "mttr": 150,
+        "detected": true
+      },
+      "6": {
+        "mttd": null,
+        "mttr": null,
+        "detected": false
+      }
+    },
+    "2": {
+      "1": {
+        "mttd": 15,
+        "mttr": 60,
+        "detected": true
+      },
+      "2": {
+        "mttd": 20,
+        "mttr": 75,
+        "detected": true
+      },
+      "3": {
+        "mttd": 25,
+        "mttr": 90,
+        "detected": true
+      },
+      "4": {
+        "mttd": 10,
+        "mttr": 45,
+        "detected": true
+      },
+      "5": {
+        "mttd": 18,
+        "mttr": 70,
+        "detected": true
+      },
+      "6": {
+        "mttd": 35,
+        "mttr": 100,
+        "detected": true
+      }
+    },
+    "3": {
+      "1": {
+        "mttd": 8,
+        "mttr": 35,
+        "detected": true
+      },
+      "2": {
+        "mttd": 12,
+        "mttr": 45,
+        "detected": true
+      },
+      "3": {
+        "mttd": 10,
+        "mttr": 40,
+        "detected": true
+      },
+      "4": {
+        "mttd": 5,
+        "mttr": 25,
+        "detected": true
+      },
+      "5": {
+        "mttd": 7,
+        "mttr": 30,
+        "detected": true
+      },
+      "6": {
+        "mttd": 15,
+        "mttr": 55,
+        "detected": true
+      }
+    }
+  }
+}

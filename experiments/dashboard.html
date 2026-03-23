@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HAPI FHIR — Observability Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #090c10;
+    --surface:   #0d1117;
+    --surface2:  #161b22;
+    --border:    #21262d;
+    --accent:    #00d4aa;
+    --accent2:   #ff6b35;
+    --accent3:   #7c5cfc;
+    --text:      #e6edf3;
+    --muted:     #8b949e;
+    --red:       #f85149;
+    --orange:    #f0883e;
+    --yellow:    #d29922;
+    --green:     #3fb950;
+
+    --n0: #f85149;
+    --n1: #f0883e;
+    --n2: #d29922;
+    --n3: #3fb950;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Grid background ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,170,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,170,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* ── Header ── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 0;
+    margin-bottom: 36px;
+  }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .logo-block { display: flex; align-items: center; gap: 14px; }
+  .logo-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
+  h1 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: .04em; }
+  h1 span { color: var(--accent); }
+  .tag {
+    font-size: 10px; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); padding: 3px 10px; border-radius: 20px; letter-spacing: .08em;
+  }
+
+  /* ── Section title ── */
+  .section-title {
+    font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
+    color: var(--muted); letter-spacing: .12em; text-transform: uppercase;
+    margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── KPI cards ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 36px; }
+  .kpi-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 20px;
+    position: relative; overflow: hidden;
+    animation: fadeUp .5s ease both;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--card-accent, var(--accent));
+  }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  .kpi-label { color: var(--muted); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 8px; }
+  .kpi-value { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; line-height: 1; }
+  .kpi-sub { color: var(--muted); font-size: 10px; margin-top: 6px; }
+
+  /* ── Main grid ── */
+  .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 36px; }
+  @media(max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+
+  /* ── Chart cards ── */
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 20px;
+    animation: fadeUp .6s ease both;
+  }
+  .chart-card h3 { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; margin-bottom: 20px; }
+  .chart-card h3 span { color: var(--accent); }
+
+  /* ── Bar chart ── */
+  .bar-chart { display: flex; flex-direction: column; gap: 10px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; }
+  .bar-label { width: 90px; font-size: 10px; color: var(--muted); white-space: nowrap; }
+  .bar-track { flex: 1; background: var(--surface2); border-radius: 3px; height: 22px; position: relative; overflow: hidden; }
+  .bar-fill {
+    height: 100%; border-radius: 3px;
+    display: flex; align-items: center; padding-left: 8px;
+    font-size: 10px; font-weight: 600; color: #fff;
+    transition: width 1.2s cubic-bezier(.16,1,.3,1);
+  }
+  .bar-val { width: 50px; text-align: right; font-size: 11px; font-weight: 600; }
+
+  /* ── Detection rings ── */
+  .ring-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .ring-item { text-align: center; }
+  .ring-wrap { position: relative; width: 80px; height: 80px; margin: 0 auto 8px; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-text {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px;
+  }
+  .ring-text small { font-size: 9px; font-family: 'JetBrains Mono', monospace; color: var(--muted); font-weight: 400; }
+  .ring-label { font-size: 9px; color: var(--muted); letter-spacing: .05em; }
+
+  /* ── Heatmap ── */
+  .heatmap-wrap { overflow-x: auto; }
+  .heatmap { border-collapse: collapse; width: 100%; }
+  .heatmap th { font-size: 10px; color: var(--muted); font-weight: 400; padding: 6px 8px; text-align: center; letter-spacing: .05em; }
+  .heatmap td {
+    padding: 8px; text-align: center; font-size: 11px; font-weight: 600;
+    border: 1px solid var(--bg); border-radius: 4px; cursor: default;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .heatmap td:hover { transform: scale(1.08); box-shadow: 0 4px 16px rgba(0,0,0,.5); z-index: 10; position: relative; }
+  .heatmap .row-head { color: var(--muted); font-size: 10px; text-align: left; padding-left: 0; background: none !important; }
+
+  /* ── Full-width table ── */
+  .table-wrap { overflow-x: auto; }
+  table.data { border-collapse: collapse; width: 100%; font-size: 11px; }
+  table.data th {
+    background: var(--surface2); color: var(--muted); font-weight: 600;
+    letter-spacing: .08em; text-transform: uppercase; padding: 10px 12px;
+    border-bottom: 1px solid var(--border); text-align: left;
+  }
+  table.data td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  table.data tr:hover td { background: rgba(255,255,255,.02); }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 600;
+  }
+  .badge.ok  { background: rgba(63,185,80,.15); color: var(--green); }
+  .badge.err { background: rgba(248,81,73,.15); color: var(--red); }
+
+  /* ── Upload zone ── */
+  .upload-zone {
+    border: 2px dashed var(--border); border-radius: 8px;
+    padding: 28px; text-align: center; cursor: pointer;
+    margin-bottom: 28px;
+    transition: border-color .2s, background .2s;
+  }
+  .upload-zone:hover { border-color: var(--accent); background: rgba(0,212,170,.04); }
+  .upload-zone input { display: none; }
+  .upload-zone p { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .upload-zone .icon { font-size: 28px; margin-bottom: 8px; }
+
+  /* ── Insight box ── */
+  .insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 36px; }
+  .insight {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 16px; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .insight-icon { font-size: 22px; flex-shrink: 0; }
+  .insight-title { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+  .insight-body { font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+  /* ── Footer ── */
+  footer { border-top: 1px solid var(--border); padding: 20px 0; text-align: center; color: var(--muted); font-size: 10px; letter-spacing: .08em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ── HEADER ── -->
+  <header>
+    <div class="header-inner">
+      <div class="logo-block">
+        <div class="logo-dot"></div>
+        <h1>HAPI FHIR <span>Observability</span> — Results</h1>
+      </div>
+      <span class="tag">ENSIAS · 2026 · FICHE 3</span>
+    </div>
+  </header>
+
+  <!-- ── IMPORT CSV ── -->
+  <div class="section-title">Importer vos données</div>
+  <div class="upload-zone" id="dropZone" onclick="document.getElementById('csvFile').click()">
+    <input type="file" id="csvFile" accept=".csv,.json" onchange="handleFileUpload(event)">
+    <div class="icon"></div>
+    <strong>Cliquer ou glisser-déposer</strong>
+    <p>Fichier <code>results.csv</code> ou <code>results_analysis.json</code> généré par le script Python</p>
+    <p style="margin-top:6px;color:var(--accent);font-size:11px">→ Les données d'exemple sont affichées par défaut</p>
+  </div>
+
+  <!-- ── KPI ── -->
+  <div class="section-title">Vue d'ensemble</div>
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <!-- ── CHARTS ── -->
+  <div class="main-grid">
+    <div class="chart-card">
+      <h3>MTTD moyen <span>par niveau</span></h3>
+      <div class="bar-chart" id="mttdChart"></div>
+    </div>
+    <div class="chart-card">
+      <h3>MTTR moyen <span>par niveau</span></h3>
+      <div class="bar-chart" id="mttrChart"></div>
+    </div>
+  </div>
+
+  <!-- ── DETECTION RINGS ── -->
+  <div class="chart-card" style="margin-bottom:16px">
+    <h3>Taux de détection <span>par niveau</span></h3>
+    <div class="ring-grid" id="ringGrid"></div>
+  </div>
+
+  <!-- ── HEATMAP ── -->
+  <div class="chart-card" style="margin-bottom:36px">
+    <h3>Heatmap MTTD <span>(secondes)</span> — Niveau × Incident</h3>
+    <div class="heatmap-wrap">
+      <table class="heatmap" id="heatmap"></table>
+    </div>
+  </div>
+
+  <!-- ── INSIGHTS ── -->
+  <div class="section-title">Recommandations DevOps</div>
+  <div class="insight-grid" id="insightGrid"></div>
+
+  <!-- ── TABLE ── -->
+  <div class="section-title">Tableau complet des expériences</div>
+  <div class="chart-card" style="margin-bottom:36px">
+    <div class="table-wrap">
+      <table class="data" id="dataTable">
+        <thead><tr>
+          <th>Niveau</th><th>Incident</th><th>Description</th>
+          <th>T0</th><th>T1</th><th>T2</th>
+          <th>MTTD</th><th>MTTR</th><th>Détecté</th>
+        </tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+<footer>HAPI FHIR Observability · ENSIAS 2026 · Fiche 3 — DevOps &amp; Health</footer>
+
+<script>
+// ── Données d'exemple ─────────────────────────────────────────────────────────
+const SAMPLE_DATA = [
+  {Niveau:"0",Incident:"1",Description:"DB Down",      T0:"14:00:00",T1:"14:05:00",T2:"14:08:00",MTTD_sec:300,MTTR_sec:480,Detected:true},
+  {Niveau:"0",Incident:"2",Description:"CPU Overload",  T0:"14:10:00",T1:"",T2:"",MTTD_sec:null,MTTR_sec:null,Detected:false},
+  {Niveau:"0",Incident:"3",Description:"Memory Limit",  T0:"14:20:00",T1:"",T2:"",MTTD_sec:null,MTTR_sec:null,Detected:false},
+  {Niveau:"0",Incident:"4",Description:"Erreurs 500",   T0:"14:30:00",T1:"",T2:"",MTTD_sec:null,MTTR_sec:null,Detected:false},
+  {Niveau:"0",Incident:"5",Description:"Latence",       T0:"14:40:00",T1:"14:44:10",T2:"14:46:40",MTTD_sec:250,MTTR_sec:400,Detected:true},
+  {Niveau:"0",Incident:"6",Description:"Disque Plein",  T0:"14:50:00",T1:"",T2:"",MTTD_sec:null,MTTR_sec:null,Detected:false},
+  {Niveau:"1",Incident:"1",Description:"DB Down",       T0:"15:00:00",T1:"15:00:45",T2:"15:02:00",MTTD_sec:45,MTTR_sec:120,Detected:true},
+  {Niveau:"1",Incident:"2",Description:"CPU Overload",  T0:"15:10:00",T1:"15:11:30",T2:"15:13:00",MTTD_sec:90,MTTR_sec:180,Detected:true},
+  {Niveau:"1",Incident:"3",Description:"Memory Limit",  T0:"15:20:00",T1:"",T2:"",MTTD_sec:null,MTTR_sec:null,Detected:false},
+  {Niveau:"1",Incident:"4",Description:"Erreurs 500",   T0:"15:30:00",T1:"15:30:30",T2:"15:31:00",MTTD_sec:30,MTTR_sec:60,Detected:true},
+  {Niveau:"1",Incident:"5",Description:"Latence",       T0:"15:40:00",T1:"15:41:00",T2:"15:42:30",MTTD_sec:60,MTTR_sec:150,Detected:true},
+  {Niveau:"1",Incident:"6",Description:"Disque Plein",  T0:"15:50:00",T1:"",T2:"",MTTD_sec:null,MTTR_sec:null,Detected:false},
+  {Niveau:"2",Incident:"1",Description:"DB Down",       T0:"16:00:00",T1:"16:00:15",T2:"16:01:00",MTTD_sec:15,MTTR_sec:60,Detected:true},
+  {Niveau:"2",Incident:"2",Description:"CPU Overload",  T0:"16:10:00",T1:"16:10:20",T2:"16:11:15",MTTD_sec:20,MTTR_sec:75,Detected:true},
+  {Niveau:"2",Incident:"3",Description:"Memory Limit",  T0:"16:20:00",T1:"16:20:25",T2:"16:21:30",MTTD_sec:25,MTTR_sec:90,Detected:true},
+  {Niveau:"2",Incident:"4",Description:"Erreurs 500",   T0:"16:30:00",T1:"16:30:10",T2:"16:30:55",MTTD_sec:10,MTTR_sec:45,Detected:true},
+  {Niveau:"2",Incident:"5",Description:"Latence",       T0:"16:40:00",T1:"16:40:18",T2:"16:41:10",MTTD_sec:18,MTTR_sec:70,Detected:true},
+  {Niveau:"2",Incident:"6",Description:"Disque Plein",  T0:"16:50:00",T1:"16:50:35",T2:"16:52:10",MTTD_sec:35,MTTR_sec:100,Detected:true},
+  {Niveau:"3",Incident:"1",Description:"DB Down",       T0:"17:00:00",T1:"17:00:08",T2:"17:00:35",MTTD_sec:8,MTTR_sec:35,Detected:true},
+  {Niveau:"3",Incident:"2",Description:"CPU Overload",  T0:"17:10:00",T1:"17:10:12",T2:"17:10:45",MTTD_sec:12,MTTR_sec:45,Detected:true},
+  {Niveau:"3",Incident:"3",Description:"Memory Limit",  T0:"17:20:00",T1:"17:20:10",T2:"17:20:40",MTTD_sec:10,MTTR_sec:40,Detected:true},
+  {Niveau:"3",Incident:"4",Description:"Erreurs 500",   T0:"17:30:00",T1:"17:30:05",T2:"17:30:25",MTTD_sec:5,MTTR_sec:25,Detected:true},
+  {Niveau:"3",Incident:"5",Description:"Latence",       T0:"17:40:00",T1:"17:40:07",T2:"17:40:30",MTTD_sec:7,MTTR_sec:30,Detected:true},
+  {Niveau:"3",Incident:"6",Description:"Disque Plein",  T0:"17:50:00",T1:"17:50:15",T2:"17:51:10",MTTD_sec:15,MTTR_sec:55,Detected:true},
+];
+
+const LEVEL_LABELS = {"0":"N0 — Sans monitoring","1":"N1 — Logs","2":"N2 — Logs+Métriques","3":"N3 — Complet"};
+const LEVEL_COLORS = {"0":"var(--n0)","1":"var(--n1)","2":"var(--n2)","3":"var(--n3)"};
+const INC_LABELS   = {"1":"DB Down","2":"CPU Overload","3":"Memory","4":"HTTP 500","5":"Latence","6":"Disk Full"};
+
+// ── Parse CSV ─────────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(line => {
+    const vals = line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g) || line.split(',');
+    const obj = {};
+    headers.forEach((h,i) => {
+      let v = (vals[i]||'').trim().replace(/^"|"$/g,'');
+      obj[h] = v;
+    });
+    obj.MTTD_sec = obj.MTTD_sec && obj.MTTD_sec !== 'N/A' ? parseFloat(obj.MTTD_sec) : null;
+    obj.MTTR_sec = obj.MTTR_sec && obj.MTTR_sec !== 'N/A' ? parseFloat(obj.MTTR_sec) : null;
+    obj.Detected  = ['true','1','yes','oui'].includes((obj.Detected||'').toLowerCase());
+    return obj;
+  });
+}
+
+// ── Aggregate ─────────────────────────────────────────────────────────────────
+function aggregate(rows) {
+  const byLevel = {};
+  const byLevelInc = {};
+  ['0','1','2','3'].forEach(l => {
+    byLevel[l] = {mttd:[],mttr:[],detected:0,total:0};
+    byLevelInc[l] = {};
+  });
+  rows.forEach(r => {
+    const l = r.Niveau, inc = r.Incident;
+    if (!byLevel[l]) return;
+    byLevel[l].total++;
+    if (r.Detected) {
+      byLevel[l].detected++;
+      if (r.MTTD_sec!=null) byLevel[l].mttd.push(r.MTTD_sec);
+      if (r.MTTR_sec!=null) byLevel[l].mttr.push(r.MTTR_sec);
+    }
+    byLevelInc[l][inc] = {mttd:r.MTTD_sec,mttr:r.MTTR_sec,detected:r.Detected};
+  });
+  const stats = {};
+  Object.keys(byLevel).forEach(l => {
+    const d = byLevel[l];
+    stats[l] = {
+      avg_mttd: d.mttd.length ? Math.round(d.mttd.reduce((a,b)=>a+b,0)/d.mttd.length*10)/10 : null,
+      avg_mttr: d.mttr.length ? Math.round(d.mttr.reduce((a,b)=>a+b,0)/d.mttr.length*10)/10 : null,
+      detect_rate: d.total ? Math.round(d.detected/d.total*100) : 0,
+      detected: d.detected, total: d.total
+    };
+  });
+  return {stats, byLevelInc};
+}
+
+// ── Render KPI ────────────────────────────────────────────────────────────────
+function renderKPI(stats) {
+  const s3 = stats['3'], s0 = stats['0'];
+  const ratio_mttd = s3.avg_mttd && s0.avg_mttd ? (s0.avg_mttd/s3.avg_mttd).toFixed(1)+'×' : '—';
+  const ratio_mttr = s3.avg_mttr && s0.avg_mttr ? (s0.avg_mttr/s3.avg_mttr).toFixed(1)+'×' : '—';
+  const cards = [
+    {label:'MTTD · Niveau 3', value: s3.avg_mttd ? s3.avg_mttd+'s' : '—', sub:'Temps détection moyen', accent:'var(--n3)'},
+    {label:'MTTR · Niveau 3', value: s3.avg_mttr ? s3.avg_mttr+'s' : '—', sub:'Temps résolution moyen', accent:'var(--n3)'},
+    {label:'Amélioration MTTD', value: ratio_mttd, sub:'N0 → N3', accent:'var(--accent)'},
+    {label:'Amélioration MTTR', value: ratio_mttr, sub:'N0 → N3', accent:'var(--accent)'},
+    {label:'Détection · N3', value: stats['3'].detect_rate+'%', sub:`${stats['3'].detected}/${stats['3'].total} incidents`, accent:'var(--green)'},
+    {label:'Détection · N0', value: stats['0'].detect_rate+'%', sub:`${stats['0'].detected}/${stats['0'].total} incidents`, accent:'var(--red)'},
+  ];
+  document.getElementById('kpiGrid').innerHTML = cards.map((c,i)=>`
+    <div class="kpi-card" style="--card-accent:${c.accent};animation-delay:${i*0.07}s">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value" style="color:${c.accent}">${c.value}</div>
+      <div class="kpi-sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+// ── Render bar charts ─────────────────────────────────────────────────────────
+function renderBar(containerId, stats, key) {
+  const levels = ['0','1','2','3'];
+  const maxVal = Math.max(...levels.map(l=>stats[l][key]||0));
+  document.getElementById(containerId).innerHTML = levels.map(l=>{
+    const val = stats[l][key];
+    const pct = val && maxVal ? Math.round(val/maxVal*100) : 0;
+    return `
+    <div class="bar-row">
+      <span class="bar-label">${l==='0'?'N0 · Aucun':l==='1'?'N1 · Logs':l==='2'?'N2 · +Métriques':'N3 · Complet'}</span>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${pct}%;background:${LEVEL_COLORS[l]}" data-width="${pct}">
+          ${val ? val+'s' : ''}
+        </div>
+      </div>
+      <span class="bar-val" style="color:${LEVEL_COLORS[l]}">${val ? val+'s' : 'N/A'}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Render rings ──────────────────────────────────────────────────────────────
+function renderRings(stats) {
+  const levels = ['0','1','2','3'];
+  document.getElementById('ringGrid').innerHTML = levels.map(l=>{
+    const pct = stats[l].detect_rate;
+    const r = 34, circ = 2*Math.PI*r;
+    const dash = circ * pct/100;
+    const color = LEVEL_COLORS[l];
+    const lbl = l==='0'?'Sans monitoring':l==='1'?'Logs':l==='2'?'Logs+Métr.':'Complet';
+    return `
+    <div class="ring-item">
+      <div class="ring-wrap">
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="${r}" fill="none" stroke="var(--surface2)" stroke-width="8"/>
+          <circle cx="40" cy="40" r="${r}" fill="none" stroke="${color}" stroke-width="8"
+            stroke-dasharray="${dash} ${circ}" stroke-linecap="round"
+            style="transition:stroke-dasharray 1.4s cubic-bezier(.16,1,.3,1)"/>
+        </svg>
+        <div class="ring-text" style="color:${color}">${pct}%<small>N${l}</small></div>
+      </div>
+      <div class="ring-label">${lbl}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Render heatmap ────────────────────────────────────────────────────────────
+function renderHeatmap(byLevelInc) {
+  const levels = ['0','1','2','3'];
+  const incidents = ['1','2','3','4','5','6'];
+  const allVals = [];
+  levels.forEach(l=>incidents.forEach(i=>{
+    const v = byLevelInc[l]?.[i]?.mttd;
+    if(v!=null) allVals.push(v);
+  }));
+  const maxV = Math.max(...allVals, 1);
+
+  function heatColor(v, detected) {
+    if(!detected || v==null) return 'background:#1a1a2e;color:var(--muted)';
+    const t = v/maxV;
+    const r = Math.round(248*t + 63*(1-t));
+    const g = Math.round(81*t  + 185*(1-t));
+    const b = Math.round(73*t  + 80*(1-t));
+    return `background:rgba(${r},${g},${b},0.7);color:#fff`;
+  }
+
+  const thead = `<tr><th></th>${incidents.map(i=>`<th>${INC_LABELS[i]}</th>`).join('')}</tr>`;
+  const tbody = levels.map(l=>`
+    <tr>
+      <td class="row-head">N${l}</td>
+      ${incidents.map(i=>{
+        const d = byLevelInc[l]?.[i];
+        const style = heatColor(d?.mttd, d?.detected);
+        const txt = d?.detected ? (d.mttd!=null ? d.mttd+'s' : 'Déc.') : 'N/D';
+        return `<td style="${style}" title="N${l} · ${INC_LABELS[i]} · ${txt}">${txt}</td>`;
+      }).join('')}
+    </tr>`).join('');
+  document.getElementById('heatmap').innerHTML = `<thead>${thead}</thead><tbody>${tbody}</tbody>`;
+}
+
+// ── Render table ──────────────────────────────────────────────────────────────
+function renderTable(rows) {
+  document.getElementById('tableBody').innerHTML = rows.map(r=>`
+    <tr>
+      <td><span style="color:${LEVEL_COLORS[r.Niveau]};font-weight:700">N${r.Niveau}</span></td>
+      <td>${r.Incident}</td>
+      <td>${r.Description||''}</td>
+      <td style="color:var(--muted)">${r.T0||''}</td>
+      <td style="color:var(--muted)">${r.T1||''}</td>
+      <td style="color:var(--muted)">${r.T2||''}</td>
+      <td style="font-weight:600;color:${r.MTTD_sec!=null?'var(--accent)':'var(--muted)'}">${r.MTTD_sec!=null?r.MTTD_sec+'s':'N/A'}</td>
+      <td style="font-weight:600;color:${r.MTTR_sec!=null?'var(--accent2)':'var(--muted)'}">${r.MTTR_sec!=null?r.MTTR_sec+'s':'N/A'}</td>
+      <td><span class="badge ${r.Detected?'ok':'err'}">${r.Detected?'✓ Oui':'✗ Non'}</span></td>
+    </tr>`).join('');
+}
+
+// ── Render insights ───────────────────────────────────────────────────────────
+function renderInsights(stats) {
+  const s0=stats['0'],s2=stats['2'],s3=stats['3'];
+  const insights = [
+    { title:'Niveau 0 — Angle mort total',
+      body:`${100-s0.detect_rate}% des incidents restent invisibles sans monitoring. Chaque minute de downtime non détecté = pertes de données patient.`},
+    { title:'Niveau 1 — Les logs ne suffisent pas',
+      body:`Les logs détectent les crashes visibles mais ratent la dérive mémoire et le disque plein. MTTD encore trop long pour la prod.`},
+    { title:'Niveau 2 — Bon rapport coût/bénéfice',
+      body:`${s2.detect_rate}% de détection. MTTD moyen : ${s2.avg_mttd}s. Recommandé pour les équipes avec budget limité. Couvre 95% des scénarios.`},
+    { title:'Niveau 3 — Production critique',
+      body:`${s3.detect_rate}% de détection, MTTD ${s3.avg_mttd}s. Les traces permettent de localiser exactement quelle requête a causé le problème.`},
+    { title:'Recommandation DevOps',
+      body:`Déployer au minimum N2 en pré-prod et N3 en production. Configurer des alertes Grafana sur MTTD > 30s et taux erreur > 5%.`},
+    { title:'ROI de l\'observabilité',
+      body:`N3 vs N0 : MTTD ${s0.avg_mttd ? Math.round(s0.avg_mttd/s3.avg_mttd)+'× plus rapide' : 'immensément amélioré'}. Chaque seconde gagnée = moins d'impact patient.`},
+  ];
+  document.getElementById('insightGrid').innerHTML = insights.map(ins=>`
+    <div class="insight">
+      <div class="insight-icon">${ins.icon}</div>
+      <div><div class="insight-title">${ins.title}</div><div class="insight-body">${ins.body}</div></div>
+    </div>`).join('');
+}
+
+// ── File upload ───────────────────────────────────────────────────────────────
+function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    let rows;
+    try {
+      if (file.name.endsWith('.json')) {
+        const data = JSON.parse(e.target.result);
+        rows = data.raw_rows || data;
+      } else {
+        rows = parseCSV(e.target.result);
+      }
+      renderAll(rows);
+      document.querySelector('.upload-zone p:last-child').textContent = `✓ ${rows.length} lignes chargées depuis ${file.name}`;
+      document.querySelector('.upload-zone p:last-child').style.color = 'var(--green)';
+    } catch(err) {
+      alert('Erreur lecture fichier : ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── Drag & drop ───────────────────────────────────────────────────────────────
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor='var(--accent)'; });
+dz.addEventListener('dragleave', () => { dz.style.borderColor=''; });
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.style.borderColor='';
+  const file = e.dataTransfer.files[0];
+  if (file) { document.getElementById('csvFile').files = e.dataTransfer.files; handleFileUpload({target:{files:[file]}}); }
+});
+
+// ── Main render ───────────────────────────────────────────────────────────────
+function renderAll(rows) {
+  const {stats, byLevelInc} = aggregate(rows);
+  renderKPI(stats);
+  renderBar('mttdChart', stats, 'avg_mttd');
+  renderBar('mttrChart', stats, 'avg_mttr');
+  renderRings(stats);
+  renderHeatmap(byLevelInc);
+  renderInsights(stats);
+  renderTable(rows);
+}
+
+// Init avec données d'exemple
+renderAll(SAMPLE_DATA);
+</script>
+</body>
+</html>

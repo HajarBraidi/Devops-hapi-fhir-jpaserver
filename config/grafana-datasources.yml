@@ -12,3 +12,12 @@ datasources:
     isDefault: true
     jsonData:
       timeInterval: "15s"
+
+  - name: Tempo
+    type: tempo
+    url: http://tempo:3200
+    jsonData:
+      tracesToLogs:
+        datasourceUid: loki
+      serviceMap:
+        datasourceUid: prometheus
