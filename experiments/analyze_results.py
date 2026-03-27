@@ -22,7 +22,7 @@ except ImportError:
     print("[WARN] matplotlib non installé. Graphiques désactivés.")
     print("       Installe avec : pip install matplotlib numpy")
 
-RESULTS_FILE = "results.csv"
+RESULTS_FILE = "results_v2.csv"
 OUTPUT_DIR   = "charts"
 
 LEVEL_LABELS = {
