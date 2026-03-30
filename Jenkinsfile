@@ -1,11 +1,10 @@
 pipeline {
-    agent any
-    //{
-        //docker {
-        //    image 'maven:3.9.5-eclipse-temurin-17' // Maven + JDK
-        //    args '-v $HOME/.m2:/root/.m2'          // cache Maven
-    //}
-    //}
+    agent {
+        docker {
+            image 'maven:3.9.5-eclipse-temurin-17'
+            args '-v $HOME/.m2:/root/.m2'
+        }
+    }
 
     environment {
         SONAR_HOST_URL   = "http://sonarqube:9000"
