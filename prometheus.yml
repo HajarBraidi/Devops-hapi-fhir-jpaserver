@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+
+  # ── HAPI FHIR — métriques applicatives Spring Boot ──
+  - job_name: 'hapi-fhir'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['hapi-fhir-jpaserver-start:8080']
+    relabel_configs:
+      - target_label: application
+        replacement: hapi-fhir
+
+  # ── Pushgateway — reçoit MTTD/MTTR depuis le script Python ──
+  - job_name: 'pushgateway'
+    honor_labels: true          # conserve les labels poussés par le script
+    static_configs:
+      - targets: ['pushgateway:9091']
+
+  # ── Prometheus lui-même ──
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

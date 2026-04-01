@@ -11,16 +11,12 @@ services:
       SPRING_DATASOURCE_PASSWORD: "admin"
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: "org.postgresql.Driver"
       SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgresDialect
-      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "health,info,prometheus,metrics"
-      MANAGEMENT_ENDPOINT_PROMETHEUS_ENABLED: "true"
-      MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED: "true"
+      SPRING_APPLICATION_NAME: "hapi-fhir"
     ports:
-      - "9090:8080"
+      - "9099:8080"
     depends_on:
       hapi-fhir-postgres:
         condition: service_healthy
-    labels:
-      - "logging=promtail"
 
   hapi-fhir-postgres:
     image: postgres:16-alpine
@@ -40,75 +36,65 @@ services:
       retries: 5
     volumes:
       - hapi-fhir-postgres:/var/lib/postgresql/data
-    labels:
-      - "logging=promtail"
 
-  loki:
-    image: grafana/loki:2.9.0
-    container_name: loki
-    user: "0"
+  sonarqube:
+    image: sonarqube:10-community
+    container_name: sonarqube-hapi-fhir
     restart: unless-stopped
-    networks:
-      - monitoring
     ports:
-      - "3100:3100"
-    volumes:
-      - ./config/loki-config.yml:/etc/loki/local-config.yaml
-      - loki-data:/loki
-    command: -config.file=/etc/loki/local-config.yaml
-
-  promtail:
-    image: grafana/promtail:3.0.0
-    container_name: promtail
-    restart: unless-stopped
-    networks:
-      - monitoring
-    volumes:
-      - ./config/promtail-config.yml:/etc/promtail/config.yml
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: -config.file=/etc/promtail/config.yml
-    depends_on:
-      - loki
-
-  grafana:
-    image: grafana/grafana:10.2.0
-    container_name: grafana
-    restart: unless-stopped
-    networks:
-      - monitoring
-    ports:
-      - "3000:3000"
+      - "9000:9000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_SECURITY_ADMIN_USER=admin
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./config/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      SONAR_JDBC_URL: jdbc:postgresql://sonarqube-db:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonar
     depends_on:
-      - loki
+      sonarqube-db:
+        condition: service_healthy
+    volumes:
+      - sonarqube-data:/opt/sonarqube/data
+      - sonarqube-logs:/opt/sonarqube/logs
+      - sonarqube-extensions:/opt/sonarqube/extensions
 
-  prometheus:
-    image: prom/prometheus:v2.47.0
-    container_name: prometheus
+  sonarqube-db:
+    image: postgres:16-alpine
+    container_name: sonarqube-db
     restart: unless-stopped
+    environment:
+      POSTGRES_DB: sonar
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+    volumes:
+      - sonarqube-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar -d sonar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins-hapi-fhir
+    restart: unless-stopped
+    user: root                          # ← nécessaire pour accéder au socket
+    ports:
+      - "8082:8080"
+      - "50000:50000"
+    environment:
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock   # ← LA ligne manquante
     networks:
       - monitoring
-    ports:
-      - "9091:9090"    # On utilise 9091 car ton HAPI FHIR occupe déjà le 9090
-    volumes:
-      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus-data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.retention.time=7d'    # Garde 7 jours de données
-    depends_on:
-      - hapi-fhir-jpaserver-start
 
 volumes:
+  sonarqube-data:
+  sonarqube-logs:
+  sonarqube-extensions:
+  sonarqube-db-data:
+  jenkins-data:
   hapi-fhir-postgres:
-  loki-data:
-  grafana-data:
-  prometheus-data:
+  sonarqube-postgres:
 
 networks:
   monitoring:
