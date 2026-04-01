@@ -3,31 +3,41 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "hapi-fhir-server:${BUILD_NUMBER}"
-        GITHUB_REPO  = "https://github.com/Ayataaki/Devops-hapi-fhir-jpaserver.git"
+        SONAR_URL    = "http://sonarqube-hapi-fhir:9000"
+    }
+
+    tools {
+        maven 'Maven'
     }
 
     stages {
 
-//        stage('Checkout') {
-//            steps {
-//                git branch: 'main', url: "${GITHUB_REPO}"
-//            }
-//        }
+        stage('Checkout') {
+            steps {
+                echo "Branche : ${env.GIT_BRANCH}"
+                echo "Commit  : ${env.GIT_COMMIT}"
+                sh 'ls -la'
+            }
+        }
 
         stage('Build Maven') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                echo 'Compilation du projet HAPI FHIR...'
+                sh 'mvn clean package -DskipTests -Djdk.lang.Process.launchMechanism=vfork'
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
+                echo 'Analyse SonarQube...'
                 withSonarQubeEnv('SonarQube') {
-                    sh '''
-                    mvn sonar:sonar \
-                      -Dsonar.projectKey=hapi-fhir-observability \
-                      -Dsonar.host.url=http://sonarqube-hapi-fhir:9000
-                    '''
+                    sh """
+                        mvn sonar:sonar \
+                          -Dsonar.projectKey=hapi-fhir-observability \
+                          -Dsonar.projectName="HAPI FHIR Observability" \
+                          -Dsonar.host.url=${SONAR_URL} \
+                          -Dsonar.scm.disabled=true
+                    """
                 }
             }
         }
@@ -42,15 +52,16 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build --target default -t $DOCKER_IMAGE .'
+                echo "Construction de l'image Docker ${DOCKER_IMAGE}..."
+                sh 'docker build --target default -t ${DOCKER_IMAGE} -f Dockerfile .'
             }
         }
 
         stage('Deploy Stack') {
             steps {
                 sh '''
-                docker compose down
-                docker compose up -d
+                    docker compose down --remove-orphans || true
+                    docker compose up -d
                 '''
             }
         }
@@ -58,10 +69,27 @@ pipeline {
         stage('Health Check') {
             steps {
                 sh '''
-                timeout 120 bash -c \
-                'until curl -sf http://localhost:9099/fhir/metadata; do sleep 5; done'
+                    for i in $(seq 1 36); do
+                        if curl -sf http://hapi-fhir-jpaserver-start:8080/fhir/metadata > /dev/null 2>&1; then
+                            echo "HAPI FHIR est UP apres $((i*5)) secondes"
+                            exit 0
+                        fi
+                        echo "Tentative $i/36 en attente 5s..."
+                        sleep 5
+                    done
+                    echo "HAPI FHIR ne repond pas apres 3 minutes"
+                    exit 1
                 '''
             }
         }
+    }
+
+    post {
+        success { echo 'Pipeline termine avec succes' }
+        failure {
+            sh 'docker stop hapi-fhir-jpaserver-start 2>/dev/null || true'
+            echo 'Pipeline echoue'
+        }
+        always { echo "Build #${BUILD_NUMBER} termine" }
     }
 }
