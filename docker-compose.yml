@@ -77,7 +77,7 @@ services:
     restart: unless-stopped
     user: root                          # ← nécessaire pour accéder au socket
     ports:
-      - "8081:8080"
+      - "8082:8080"
       - "50000:50000"
     environment:
       JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
