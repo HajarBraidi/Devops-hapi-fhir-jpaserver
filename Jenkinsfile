@@ -8,11 +8,11 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: "${GITHUB_REPO}"
-            }
-        }
+//        stage('Checkout') {
+//            steps {
+//                git branch: 'main', url: "${GITHUB_REPO}"
+//            }
+//        }
 
         stage('Build Maven') {
             steps {
