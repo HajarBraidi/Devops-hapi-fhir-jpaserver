@@ -81,7 +81,7 @@ services:
       - loki
 
   grafana:
-    image: grafana/grafana:10.2.0
+    image: grafana/grafana:latest
     container_name: grafana
     restart: unless-stopped
     networks:
